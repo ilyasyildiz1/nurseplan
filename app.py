@@ -59,21 +59,30 @@ def login_ui():
                 st.rerun()
             except Exception:
                 st.error("Giriş başarısız. Email/şifre kontrol edin.")
-    with t2:
-        email = st.text_input("Yeni email", key="reg_email")
-        pw = st.text_input("Yeni şifre", type="password", key="reg_pw")
-        pw2 = st.text_input("Yeni şifre (tekrar)", type="password", key="reg_pw2")
-        if st.button("Kayıt Ol", key="reg_btn"):
-            if pw != pw2:
-                st.error("Şifreler uyuşmuyor.")
-            elif len(pw) < 6:
-                st.error("Şifre en az 6 karakter olmalı.")
-            else:
-                try:
-                    _auth.create_user_with_email_and_password(email, pw)
-                    st.success("Kayıt tamam ✅ Şimdi Giriş sekmesinden giriş yap.")
-                except Exception:
-                    st.error("Kayıt başarısız. Email kullanımda olabilir.")
+
+with t2:
+    email = st.text_input("Yeni email", key="reg_email")
+    pw = st.text_input("Yeni şifre", type="password", key="reg_pw")
+    pw2 = st.text_input("Yeni şifre (tekrar)", type="password", key="reg_pw2")
+
+    if st.button("Kayıt Ol", key="reg_btn"):
+
+        if not email:
+            st.error("Email gir")
+        elif not pw:
+            st.error("Şifre gir")
+        elif len(pw) < 6:
+            st.error("Şifre en az 6 karakter olmalı.")
+        elif pw != pw2:
+            st.error("Şifreler uyuşmuyor.")
+        else:
+            try:
+                _auth.create_user_with_email_and_password(email, pw)
+                st.success("Kayıt tamam ✅ Şimdi Giriş sekmesinden giriş yap.")
+            except Exception as e:
+                st.error(str(e))
+
+
 
 def logout_button():
     with st.sidebar:
