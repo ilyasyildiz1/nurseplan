@@ -27,6 +27,8 @@ _pyrebase_cfg = {
     "apiKey": FIREBASE_API_KEY,
     "authDomain": FIREBASE_AUTH_DOMAIN,
     "projectId": FIREBASE_PROJECT_ID,
+    "databaseURL": "https://nurseplan1.firebaseio.com",
+    
 }
 _pb = pyrebase.initialize_app(_pyrebase_cfg)
 _auth = _pb.auth()
