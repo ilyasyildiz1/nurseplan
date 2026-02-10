@@ -28,8 +28,9 @@ _pyrebase_cfg = {
     "authDomain": FIREBASE_AUTH_DOMAIN,
     "projectId": FIREBASE_PROJECT_ID,
     "databaseURL": "https://nurseplan1.firebaseio.com",
-    
+    "storageBucket": "nurseplan1.firebasestorage.app"
 }
+
 _pb = pyrebase.initialize_app(_pyrebase_cfg)
 _auth = _pb.auth()
 
