@@ -8,6 +8,129 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 import streamlit as st
+
+# =========================
+# FIREBASE LOGIN + KULLANICIYA ÖZEL KAYIT (Firestore REST)
+# - Email/Şifre ile giriş & kayıt
+# - Her kullanıcıya özel "state_json" dokümanı
+# =========================
+import urllib.request
+
+import pyrebase
+
+# Firebase Web App Config (senin projen)
+FIREBASE_API_KEY = "AIzaSyDYnbR_a6Y3OgoK2FME0OoH7nGJRnLRSo4"
+FIREBASE_AUTH_DOMAIN = "nurseplan1.firebaseapp.com"
+FIREBASE_PROJECT_ID = "nurseplan1"
+
+_pyrebase_cfg = {
+    "apiKey": FIREBASE_API_KEY,
+    "authDomain": FIREBASE_AUTH_DOMAIN,
+    "projectId": FIREBASE_PROJECT_ID,
+}
+_pb = pyrebase.initialize_app(_pyrebase_cfg)
+_auth = _pb.auth()
+
+def is_logged_in() -> bool:
+    return bool(st.session_state.get("fb_user"))
+
+def _bearer_token() -> str:
+    u = st.session_state.get("fb_user") or {}
+    return u.get("idToken") or ""
+
+def _uid() -> str:
+    u = st.session_state.get("fb_user") or {}
+    return u.get("localId") or ""
+
+def login_ui():
+    st.title("NursePlan Giriş")
+    t1, t2 = st.tabs(["Giriş", "Kayıt Ol"])
+    with t1:
+        email = st.text_input("Email", key="login_email")
+        pw = st.text_input("Şifre", type="password", key="login_pw")
+        if st.button("Giriş Yap", key="login_btn"):
+            try:
+                user = _auth.sign_in_with_email_and_password(email, pw)
+                st.session_state.fb_user = user
+                st.success("Giriş başarılı ✅")
+                st.rerun()
+            except Exception:
+                st.error("Giriş başarısız. Email/şifre kontrol edin.")
+    with t2:
+        email = st.text_input("Yeni email", key="reg_email")
+        pw = st.text_input("Yeni şifre", type="password", key="reg_pw")
+        pw2 = st.text_input("Yeni şifre (tekrar)", type="password", key="reg_pw2")
+        if st.button("Kayıt Ol", key="reg_btn"):
+            if pw != pw2:
+                st.error("Şifreler uyuşmuyor.")
+            elif len(pw) < 6:
+                st.error("Şifre en az 6 karakter olmalı.")
+            else:
+                try:
+                    _auth.create_user_with_email_and_password(email, pw)
+                    st.success("Kayıt tamam ✅ Şimdi Giriş sekmesinden giriş yap.")
+                except Exception:
+                    st.error("Kayıt başarısız. Email kullanımda olabilir.")
+
+def logout_button():
+    with st.sidebar:
+        if st.button("Çıkış", key="logout_btn"):
+            st.session_state.fb_user = None
+            st.rerun()
+
+def _firestore_doc_url(uid: str) -> str:
+    return f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/users/{uid}"
+
+def save_user_state(payload: dict):
+    uid = _uid()
+    token = _bearer_token()
+    if not uid or not token:
+        return
+
+    state_json = json.dumps(payload, ensure_ascii=False)
+    body = {
+        "fields": {
+            "state_json": {"stringValue": state_json},
+            "updated_at": {"timestampValue": datetime.utcnow().isoformat(timespec="seconds") + "Z"},
+        }
+    }
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(
+        _firestore_doc_url(uid),
+        data=data,
+        method="PATCH",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    try:
+        urllib.request.urlopen(req, timeout=20).read()
+    except Exception:
+        pass
+
+def load_user_state() -> dict:
+    uid = _uid()
+    token = _bearer_token()
+    if not uid or not token:
+        return {}
+
+    req = urllib.request.Request(
+        _firestore_doc_url(uid),
+        method="GET",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    try:
+        raw = urllib.request.urlopen(req, timeout=20).read()
+        doc = json.loads(raw.decode("utf-8"))
+        fields = doc.get("fields", {})
+        sj = fields.get("state_json", {}).get("stringValue")
+        if not sj:
+            return {}
+        return json.loads(sj)
+    except Exception:
+        return {}
+
 import streamlit.components.v1 as components
 
 from reportlab.lib import colors
@@ -199,6 +322,7 @@ def _migrate_rules(rules: dict) -> dict:
 
 
 def init_state():
+    # ---- defaults ----
     if "staff" not in st.session_state:
         st.session_state.staff: List[Staff] = []
     if "leaves" not in st.session_state:
@@ -233,7 +357,68 @@ def init_state():
     if "active_page_id" not in st.session_state:
         st.session_state.active_page_id = "personel"
 
+    # ---- Firebase'ten kullanıcıya özel state yükle (bir kez) ----
+    if "fb_state_loaded" not in st.session_state:
+        st.session_state.fb_state_loaded = True
+        try:
+            user_data = load_user_state()
+            if isinstance(user_data, dict) and user_data:
+                # staff: list[dict] -> List[Staff]
+                staff_list: List[Staff] = []
+                for item in user_data.get("staff", []) or []:
+                    if isinstance(item, Staff):
+                        staff_list.append(item)
+                        continue
+                    if not isinstance(item, dict):
+                        continue
+                    name = (item.get("name") or item.get("Ad Soyad") or "").strip()
+                    if not name:
+                        continue
+                    role = item.get("role") or item.get("Ünvan") or "Staff Hemşire"
+                    target = item.get("target_hours") or item.get("Aylık Saat") or 0
+                    avail = item.get("availability") or item.get("Vardiya") or "both"
+                    night_cap = item.get("night_cap")
+                    try:
+                        target_i = int(target)
+                    except Exception:
+                        target_i = 0
+                    try:
+                        night_cap_i = None if night_cap in (None, "", 0, "0") else int(night_cap)
+                    except Exception:
+                        night_cap_i = None
+                    staff_list.append(
+                        Staff(
+                            name=name,
+                            role=role,
+                            target_hours=target_i,
+                            availability=avail,
+                            night_cap=night_cap_i,
+                        )
+                    )
+                if staff_list:
+                    st.session_state.staff = staff_list
+
+                # leaves: {"isim": ["2026-02-01", ...]}
+                leaves_in = user_data.get("leaves", {}) or {}
+                leaves_out: Dict[str, Set[date]] = {}
+                for k, vals in leaves_in.items():
+                    s: Set[date] = set()
+                    for v in (vals or []):
+                        try:
+                            s.add(pd.to_datetime(v).date())
+                        except Exception:
+                            pass
+                    leaves_out[str(k)] = s
+                if leaves_out:
+                    st.session_state.leaves = leaves_out
+
+                # rules
+                st.session_state.rules = user_data.get("rules", st.session_state.rules) or st.session_state.rules
+        except Exception:
+            pass
+
     auto_load_state()
+
 
 
 # =========================================================
@@ -972,6 +1157,13 @@ def make_overtime_report(fair_df: pd.DataFrame, over_thr: float = 10.0, under_th
 # UI
 # =========================================================
 st.set_page_config(page_title="Vardiya / Nöbet Planlayıcı", layout="wide")
+# === LOGIN GATE ===
+if not is_logged_in():
+    login_ui()
+    st.stop()
+else:
+    logout_button()
+
 init_state()
 
 components.html(
@@ -1097,21 +1289,37 @@ if st.session_state.active_page_id == "personel":
         )
         nc = e.number_input("Aylık max gece (ops.)", min_value=0, value=0, step=1)
         ok = st.form_submit_button("Ekle")
+if ok:
+    nm = nm.strip()
+    if not nm:
+        st.error("Ad Soyad boş olamaz.")
+    elif any(s.name == nm for s in st.session_state.staff):
+        st.error("Bu isim zaten var. (Aynı isim olmasın)")
+    else:
+        cap = None if int(nc) == 0 else int(nc)
 
-    if ok:
-        nm = nm.strip()
-        if not nm:
-            st.error("Ad Soyad boş olamaz.")
-        elif any(s.name == nm for s in st.session_state.staff):
-            st.error("Bu isim zaten var. (Aynı isim olmasın)")
-        else:
-            cap = None if int(nc) == 0 else int(nc)
-            st.session_state.staff.append(
-                Staff(name=nm, role=rl, target_hours=int(th), availability=av, night_cap=cap)
-            )
-            st.session_state.leaves.setdefault(nm, set())
-            auto_save_state()
-            st.success(f"Eklendi: {nm}")
+        st.session_state.staff.append(
+            Staff(name=nm, role=rl, target_hours=int(th), availability=av, night_cap=cap)
+        )
+        st.session_state.leaves.setdefault(nm, set())
+
+        auto_save_state()
+
+        # 🔴 FIREBASE KAYDET
+        try:
+            save_user_state({
+                "staff": [s.__dict__ for s in st.session_state.staff],
+                "leaves": {k: [d.isoformat() for d in v] for k, v in st.session_state.leaves.items()},
+                "rules": st.session_state.rules,
+            })
+        except Exception:
+            pass
+
+        st.success(f"Eklendi: {nm}")
+
+
+
+
 
     st.divider()
     st.subheader("Personel Listesi")
@@ -1124,10 +1332,20 @@ if st.session_state.active_page_id == "personel":
         if st.button("Seçili personeli sil") and del_nm:
             st.session_state.staff = [s for s in st.session_state.staff if s.name != del_nm]
             st.session_state.leaves.pop(del_nm, None)
+
             auto_save_state()
+
+            # 🔴 FIREBASE KAYDET
+            try:
+                save_user_state({
+                    "staff": [s.__dict__ for s in st.session_state.staff],
+                    "leaves": {k: [d.isoformat() for d in v] for k, v in st.session_state.leaves.items()},
+                    "rules": st.session_state.rules,
+                })
+            except Exception:
+                pass
+
             st.success("Silindi.")
-    else:
-        st.info("Henüz personel yok.")
 
 
 # =========================================================
