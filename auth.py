@@ -54,7 +54,7 @@ def login_ui():
         if st.button("Giriş Yap", key="login_btn"):
             try:
                 user = _auth.sign_in_with_email_and_password(email, pw)
-                st.session_state.fb_user = user
+                st.session_state.user = user
                 st.success("Giriş başarılı ✅")
                 st.rerun()
             except Exception:
