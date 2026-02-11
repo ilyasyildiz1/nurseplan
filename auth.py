@@ -34,9 +34,8 @@ _pyrebase_cfg = {
 _pb = pyrebase.initialize_app(_pyrebase_cfg)
 _auth = _pb.auth()
 
-def is_logged_in() -> bool:
-    return bool(st.session_state.get("fb_user"))
-
+def is_logged_in():
+    return "user" in st.session_state and st.session_state.user is not None
 def _bearer_token() -> str:
     u = st.session_state.get("fb_user") or {}
     return u.get("idToken") or ""
@@ -87,7 +86,7 @@ with t2:
 def logout_button():
     with st.sidebar:
         if st.button("Çıkış", key="logout_btn"):
-            st.session_state.fb_user = None
+            st.session_state.user = None
             st.rerun()
 
 def _firestore_doc_url(uid: str) -> str:
