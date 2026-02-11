@@ -1307,34 +1307,33 @@ if st.session_state.active_page_id == "personel":
             format_func=lambda x: {"both": "İkisi", "day": "Gündüz", "night": "Gece"}[x],
         )
         nc = e.number_input("Aylık max gece (ops.)", min_value=0, value=0, step=1)
-        ok = st.form_submit_button("Ekle")
-if ok:
-    nm = nm.strip()
-    if not nm:
-        st.error("Ad Soyad boş olamaz.")
-    elif any(s.name == nm for s in st.session_state.staff):
-        st.error("Bu isim zaten var. (Aynı isim olmasın)")
-    else:
-        cap = None if int(nc) == 0 else int(nc)
+        ok_add_staff = st.form_submit_button("Ekle")
 
-        st.session_state.staff.append(
-            Staff(name=nm, role=rl, target_hours=int(th), availability=av, night_cap=cap)
-        )
-        st.session_state.leaves.setdefault(nm, set())
+    if ok_add_staff:
+        nm = nm.strip()
+        if not nm:
+            st.error("Ad Soyad boş olamaz.")
+        elif any(s.name == nm for s in st.session_state.staff):
+            st.error("Bu isim zaten var. (Aynı isim olmasın)")
+        else:
+            cap = None if int(nc) == 0 else int(nc)
+            st.session_state.staff.append(
+                Staff(name=nm, role=rl, target_hours=int(th), availability=av, night_cap=cap)
+            )
+            st.session_state.leaves.setdefault(nm, set())
+            auto_save_state()
 
-        auto_save_state()
+            # Firebase'e kaydet (senin eklediğin blok varsa burada kalsın)
+            try:
+                save_user_state({
+                    "staff": [s.__dict__ for s in st.session_state.staff],
+                    "leaves": {k: [d.isoformat() for d in v] for k, v in st.session_state.leaves.items()},
+                    "rules": st.session_state.rules,
+                })
+            except Exception:
+                pass
 
-        # 🔴 FIREBASE KAYDET
-        try:
-            save_user_state({
-                "staff": [s.__dict__ for s in st.session_state.staff],
-                "leaves": {k: [d.isoformat() for d in v] for k, v in st.session_state.leaves.items()},
-                "rules": st.session_state.rules,
-            })
-        except Exception:
-            pass
-
-        st.success(f"Eklendi: {nm}")
+            st.success(f"Eklendi: {nm}")
 
 
 
