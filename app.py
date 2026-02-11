@@ -340,6 +340,11 @@ def _migrate_rules(rules: dict) -> dict:
 
 
 def init_state():
+
+    # 🔴 Kullanıcı giriş yaptıysa state sıfırlama
+    if "user" in st.session_state and st.session_state.user is not None:
+        return
+
     # ---- defaults ----
     if "staff" not in st.session_state:
         st.session_state.staff: List[Staff] = []
