@@ -1176,6 +1176,7 @@ def make_overtime_report(fair_df: pd.DataFrame, over_thr: float = 10.0, under_th
 # UI
 # =========================================================
 st.set_page_config(page_title="Vardiya / Nöbet Planlayıcı", layout="wide")
+st.image("logo.png", width=220)
 # === LOGIN GATE ===
 if not is_logged_in():
     login_ui()
