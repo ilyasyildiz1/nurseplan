@@ -18,21 +18,27 @@ import urllib.request
 
 import pyrebase
 
-# Firebase Web App Config (senin projen)
-FIREBASE_API_KEY = "AIzaSyDYnbR_a6Y3OgoK2FME0OoH7nGJRnLRSo4"
-FIREBASE_AUTH_DOMAIN = "nurseplan1.firebaseapp.com"
-FIREBASE_PROJECT_ID = "nurseplan1"
+# ===== YENİ FIREBASE (nurseplan2) =====
+FIREBASE_API_KEY = "AIzaSyDpH641YjbdXY2xfGRs3DXRWceX-0Wg7-g"
+FIREBASE_AUTH_DOMAIN = "nurseplan2.firebaseapp.com"
+FIREBASE_PROJECT_ID = "nurseplan2"
+FIREBASE_STORAGE_BUCKET = "nurseplan2.firebasestorage.app"
+FIREBASE_MESSAGING_SENDER_ID = "850454086872"
+FIREBASE_APP_ID = "1:850454086872:web:388cf1e85e4fe21a4b43ad"
 
 _pyrebase_cfg = {
     "apiKey": FIREBASE_API_KEY,
     "authDomain": FIREBASE_AUTH_DOMAIN,
     "projectId": FIREBASE_PROJECT_ID,
-    "databaseURL": "https://nurseplan1.firebaseio.com",
-    "storageBucket": "nurseplan1.firebasestorage.app"
+    "storageBucket": FIREBASE_STORAGE_BUCKET,
+    "messagingSenderId": FIREBASE_MESSAGING_SENDER_ID,
+    "appId": FIREBASE_APP_ID,
+    "databaseURL": ""  # boş kalabilir
 }
 
 _pb = pyrebase.initialize_app(_pyrebase_cfg)
 _auth = _pb.auth()
+
 
 def is_logged_in() -> bool:
     return "user" in st.session_state and st.session_state.user is not None
@@ -1176,7 +1182,6 @@ def make_overtime_report(fair_df: pd.DataFrame, over_thr: float = 10.0, under_th
 # UI
 # =========================================================
 st.set_page_config(page_title="Vardiya / Nöbet Planlayıcı", layout="wide")
-st.image("logo.png", width=220)
 # === LOGIN GATE ===
 if not is_logged_in():
     login_ui()
