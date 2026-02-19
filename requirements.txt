@@ -1,6 +1,7 @@
-streamlit
+streamlit==1.37.0
 pandas
 reportlab
 openpyxl
 firebase-admin
 pyrebase4
+python-dotenv
