@@ -64,11 +64,11 @@ def login_ui():
         if st.button("Giriş Yap"):
             try:
                 user = _auth.sign_in_with_email_and_password(email, pw)
-                st.session_state.user = None
+                st.session_state.user = user
                 st.success("Giriş başarılı")
                 
-            except Exception as e:
-                st.error(str(e))
+            except Exception:
+                st.error("Giriş başarısız")
 
     # 🔵 KAYIT TAB
     with t2:
@@ -97,9 +97,8 @@ def login_ui():
 
 
 def logout_button():
-    with st.sidebar:
-        if st.button("Çıkış", key="logout_btn"):
-            st.session_state.fb_user = None
+    if st.sidebar.button("Çıkış"):
+        st.session_state.user = None
             
 
 def _firestore_doc_url(uid: str) -> str:
