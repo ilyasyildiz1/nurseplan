@@ -64,7 +64,7 @@ def login_ui():
         if st.button("Giriş Yap"):
             try:
                 user = _auth.sign_in_with_email_and_password(email, pw)
-                st.session_state.user = user
+                st.session_state.user = None
                 st.success("Giriş başarılı")
                 st.rerun()
             except Exception as e:
@@ -1186,8 +1186,8 @@ st.set_page_config(page_title="Vardiya / Nöbet Planlayıcı", layout="wide")
 if not is_logged_in():
     login_ui()
     st.stop()
-else:
-    logout_button()
+
+logout_button()
 
 init_state()
 
