@@ -18,24 +18,31 @@ import urllib.request
 
 import pyrebase
 
-# Firebase Web App Config (senin projen)
-FIREBASE_API_KEY = "AIzaSyDYnbR_a6Y3OgoK2FME0OoH7nGJRnLRSo4"
-FIREBASE_AUTH_DOMAIN = "nurseplan1.firebaseapp.com"
-FIREBASE_PROJECT_ID = "nurseplan1"
+# ===== YENİ FIREBASE (nurseplan2) =====
+FIREBASE_API_KEY = "AIzaSyDpH641YjbdXY2xfGRs3DXRWceX-0Wg7-g"
+FIREBASE_AUTH_DOMAIN = "nurseplan2.firebaseapp.com"
+FIREBASE_PROJECT_ID = "nurseplan2"
+FIREBASE_STORAGE_BUCKET = "nurseplan2.firebasestorage.app"
+FIREBASE_MESSAGING_SENDER_ID = "850454086872"
+FIREBASE_APP_ID = "1:850454086872:web:388cf1e85e4fe21a4b43ad"
 
 _pyrebase_cfg = {
     "apiKey": FIREBASE_API_KEY,
     "authDomain": FIREBASE_AUTH_DOMAIN,
     "projectId": FIREBASE_PROJECT_ID,
-    "databaseURL": "https://nurseplan1.firebaseio.com",
-    "storageBucket": "nurseplan1.firebasestorage.app"
+    "storageBucket": FIREBASE_STORAGE_BUCKET,
+    "messagingSenderId": FIREBASE_MESSAGING_SENDER_ID,
+    "appId": FIREBASE_APP_ID,
+    "databaseURL": ""  # boş kalabilir
 }
 
 _pb = pyrebase.initialize_app(_pyrebase_cfg)
 _auth = _pb.auth()
 
-def is_logged_in():
+
+def is_logged_in() -> bool:
     return "user" in st.session_state and st.session_state.user is not None
+
 def _bearer_token() -> str:
     u = st.session_state.get("fb_user") or {}
     return u.get("idToken") or ""
@@ -46,47 +53,52 @@ def _uid() -> str:
 
 def login_ui():
     st.title("NursePlan Giriş")
+
     t1, t2 = st.tabs(["Giriş", "Kayıt Ol"])
+
+    # 🔵 GİRİŞ TAB
     with t1:
-        email = st.text_input("Email", key="login_email")
-        pw = st.text_input("Şifre", type="password", key="login_pw")
-        if st.button("Giriş Yap", key="login_btn"):
+        email = st.text_input("Email")
+        pw = st.text_input("Şifre", type="password")
+
+        if st.button("Giriş Yap"):
             try:
                 user = _auth.sign_in_with_email_and_password(email, pw)
                 st.session_state.user = user
-                st.success("Giriş başarılı ✅")
+                st.success("Giriş başarılı")
                 
             except Exception:
-                st.error("Giriş başarısız. Email/şifre kontrol edin.")
+                st.error("Giriş başarısız")
 
-with t2:
-    email = st.text_input("Yeni email", key="reg_email")
-    pw = st.text_input("Yeni şifre", type="password", key="reg_pw")
-    pw2 = st.text_input("Yeni şifre (tekrar)", type="password", key="reg_pw2")
+    # 🔵 KAYIT TAB
+    with t2:
+        email = st.text_input("Yeni email", key="reg_email")
+        pw = st.text_input("Yeni şifre", type="password", key="reg_pw")
+        pw2 = st.text_input("Yeni şifre (tekrar)", type="password", key="reg_pw2")
 
-    if st.button("Kayıt Ol", key="reg_btn"):
+        if st.button("Kayıt Ol", key="reg_btn"):
 
-        if not email:
-            st.error("Email gir")
-        elif not pw:
-            st.error("Şifre gir")
-        elif len(pw) < 6:
-            st.error("Şifre en az 6 karakter olmalı.")
-        elif pw != pw2:
-            st.error("Şifreler uyuşmuyor.")
-        else:
-            try:
-                _auth.create_user_with_email_and_password(email, pw)
-                st.success("Kayıt tamam ✅ Şimdi Giriş sekmesinden giriş yap.")
-            except Exception as e:
-                st.error(str(e))
+            if not email:
+                st.error("Email gir")
+            elif not pw:
+                st.error("Şifre gir")
+            elif len(pw) < 6:
+                st.error("Şifre en az 6 karakter olmalı.")
+            elif pw != pw2:
+                st.error("Şifreler uyuşmuyor.")
+            else:
+                try:
+                    _auth.create_user_with_email_and_password(email, pw)
+                    st.success("Kayıt tamam ✅ Şimdi Giriş sekmesinden giriş yap.")
+                except Exception as e:
+                    st.error(str(e))
+
 
 
 
 def logout_button():
-    with st.sidebar:
-        if st.button("Çıkış", key="logout_btn"):
-            st.session_state.user = None
+    if st.sidebar.button("Çıkış"):
+        st.session_state.user = None
             
 
 def _firestore_doc_url(uid: str) -> str:
@@ -333,6 +345,7 @@ def _migrate_rules(rules: dict) -> dict:
 
 
 def init_state():
+
     # ---- defaults ----
     if "staff" not in st.session_state:
         st.session_state.staff: List[Staff] = []
@@ -1172,8 +1185,8 @@ st.set_page_config(page_title="Vardiya / Nöbet Planlayıcı", layout="wide")
 if not is_logged_in():
     login_ui()
     st.stop()
-else:
-    logout_button()
+
+logout_button()
 
 init_state()
 
@@ -1299,34 +1312,33 @@ if st.session_state.active_page_id == "personel":
             format_func=lambda x: {"both": "İkisi", "day": "Gündüz", "night": "Gece"}[x],
         )
         nc = e.number_input("Aylık max gece (ops.)", min_value=0, value=0, step=1)
-        ok = st.form_submit_button("Ekle")
-if ok:
-    nm = nm.strip()
-    if not nm:
-        st.error("Ad Soyad boş olamaz.")
-    elif any(s.name == nm for s in st.session_state.staff):
-        st.error("Bu isim zaten var. (Aynı isim olmasın)")
-    else:
-        cap = None if int(nc) == 0 else int(nc)
+        ok_add_staff = st.form_submit_button("Ekle")
 
-        st.session_state.staff.append(
-            Staff(name=nm, role=rl, target_hours=int(th), availability=av, night_cap=cap)
-        )
-        st.session_state.leaves.setdefault(nm, set())
+    if ok_add_staff:
+        nm = nm.strip()
+        if not nm:
+            st.error("Ad Soyad boş olamaz.")
+        elif any(s.name == nm for s in st.session_state.staff):
+            st.error("Bu isim zaten var. (Aynı isim olmasın)")
+        else:
+            cap = None if int(nc) == 0 else int(nc)
+            st.session_state.staff.append(
+                Staff(name=nm, role=rl, target_hours=int(th), availability=av, night_cap=cap)
+            )
+            st.session_state.leaves.setdefault(nm, set())
+            auto_save_state()
 
-        auto_save_state()
+            # Firebase'e kaydet (senin eklediğin blok varsa burada kalsın)
+            try:
+                save_user_state({
+                    "staff": [s.__dict__ for s in st.session_state.staff],
+                    "leaves": {k: [d.isoformat() for d in v] for k, v in st.session_state.leaves.items()},
+                    "rules": st.session_state.rules,
+                })
+            except Exception:
+                pass
 
-        # 🔴 FIREBASE KAYDET
-        try:
-            save_user_state({
-                "staff": [s.__dict__ for s in st.session_state.staff],
-                "leaves": {k: [d.isoformat() for d in v] for k, v in st.session_state.leaves.items()},
-                "rules": st.session_state.rules,
-            })
-        except Exception:
-            pass
-
-        st.success(f"Eklendi: {nm}")
+            st.success(f"Eklendi: {nm}")
 
 
 
