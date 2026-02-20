@@ -55,7 +55,7 @@ def login_ui():
                 user = _auth.sign_in_with_email_and_password(email, pw)
                 st.session_state.user = user
                 st.success("Giriş başarılı ✅")
-                st.rerun()
+                
             except Exception:
                 st.error("Giriş başarısız. Email/şifre kontrol edin.")
 
@@ -87,7 +87,7 @@ def logout_button():
     with st.sidebar:
         if st.button("Çıkış", key="logout_btn"):
             st.session_state.user = None
-            st.rerun()
+            
 
 def _firestore_doc_url(uid: str) -> str:
     return f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/users/{uid}"
@@ -1247,7 +1247,7 @@ with c2:
                 st.session_state.last_error = f"{type(e).__name__}: {e}"
             finally:
                 st.session_state.upload_in_progress = False
-            st.rerun()
+            
 
     if st.session_state.last_error:
         st.error("Yükleme hatası:")
@@ -1256,7 +1256,7 @@ with c2:
 with c3:
     if st.button("Tüm veriyi sıfırla", type="secondary"):
         st.session_state.clear()
-        st.rerun()
+        
 
 st.divider()
 
@@ -1481,7 +1481,7 @@ elif st.session_state.active_page_id == "cizelge":
                 st.session_state.manual_matrix = matrix_df.copy(deep=True)
                 st.session_state.status_msg = "Otomatik çizelge üretildi ✅"
                 st.session_state.last_error = ""
-                st.rerun()
+                
             except Exception as e:
                 st.session_state.auto_pack = None
                 st.session_state.manual_matrix = None
@@ -1525,7 +1525,7 @@ elif st.session_state.active_page_id == "cizelge":
                 st.session_state.active_page_id = "cizelge"
                 st.session_state.manual_matrix = auto_matrix.copy(deep=True)
                 st.session_state.status_msg = "Otomatiğe sıfırlandı ✅"
-                st.rerun()
+                
 
             if save:
                 st.session_state.active_page_id = "cizelge"
@@ -1542,7 +1542,7 @@ elif st.session_state.active_page_id == "cizelge":
                     edited["Toplam Saat"] = compute_totals_from_matrix(edited, y, m).round(2)
                     st.session_state.manual_matrix = edited.copy(deep=True)
                     st.session_state.status_msg = "Kaydedildi ✅"
-                    st.rerun()
+                    
 
             final_matrix = st.session_state.manual_matrix
 
